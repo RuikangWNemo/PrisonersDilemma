@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prisoner's Dilemma Simulator</title>
+    <style>
+        /* CSS Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            text-align: center;
+        }
+
+        select, input[type="number"], button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        #gameControls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #gameControls button {
+            width: auto;
+            margin: 0 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        #finalResult {
+            font-size: 18px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            h1, h2, h3 {
+                font-size: 24px;
+            }
+
+            select, input[type="number"], button {
+                font-size: 14px;
+            }
+
+            th, td {
+                font-size: 12px;
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prisoner's Dilemma Simulator</h1>
+        <h3>Game Settings</h3>
+        <label for="gameMode">Choose Game Mode:</label>
+        <select id="gameMode">
+            <option value="simulation">Full Simulation</option>
+            <option value="real">Play Against Computer</option>
+        </select>
+        <label for="computerStrategy">Choose Computer Strategy:</label>
+        <select id="computerStrategy">
+            <option value="always_cooperate">Always Cooperate</option>
+            <option value="always_defect">Always Defect</option>
+            <option value="tit_for_tat">Tit-for-Tat</option>
+            <option value="random">Random</option>
+        </select>
+        <label for="rounds">Enter Number of Rounds:</label>
+        <input type="number" id="rounds" value="5" min="1" max="1000">
+        <button id="startBtn">Start Game</button>
+
+        <h3 id="currentRound"></h3>
+        <div id="gameControls" style="display:none;">
+            <button id="cooperateBtn">Cooperate (C)</button>
+            <button id="defectBtn">Defect (D)</button>
+        </div>
+
+        <table id="resultsTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Round</th>
+                    <th>Your Choice</th>
+                    <th>Computer Choice</th>
+                    <th>Your Score</th>
+                    <th>Computer Score</th>
+                    <th>Explanation</th>
+                </tr>
+            </thead>
+            <tbody id="results"></tbody>
+        </table>
+        <h2 id="finalResult"></h2>
+    </div>
+
+    <script>
+        // JavaScript Code
+        (function () {
+            'use strict';
+
+            // Game class encapsulates all game logic
+            class Game {
+                constructor(mode, computerStrategy, totalRounds) {
+                    this.mode = mode;
+                    this.computerStrategyName = computerStrategy;
+                    this.totalRounds = totalRounds;
+                    this.currentRound = 0;
+                    this.userScore = 0;
+                    this.computerScore = 0;
+                    this.userHistory = [];
+                    this.computerHistory = [];
+                    this.results = [];
+                    this.initStrategies();
+                    this.computerStrategy = this.strategies[computerStrategy];
+                }
+
+                // Initialize available strategies
+                initStrategies() {
+                    this.strategies = {
+                        always_cooperate: () => 'C',
+                        always_defect: () => 'D',
+                        tit_for_tat: (history) => history.length === 0 ? 'C' : history[history.length - 1],
+                        random: () => Math.random() < 0.5 ? 'C' : 'D',
+                    };
+                }
+
+                // Play a single round
+                playRound(userChoice) {
+                    const computerChoice = this.mode === 'simulation' ? this.strategies.random() : this.computerStrategy(this.userHistory);
+                    const [userPoints, computerPoints] = this.getOutcome(userChoice, computerChoice);
+
+                    this.userScore += userPoints;
+                    this.computerScore += computerPoints;
+                    this.userHistory.push(userChoice);
+                    this.computerHistory.push(computerChoice);
+                    this.currentRound++;
+
+                    const result = {
+                        round: this.currentRound,
+                        userChoice,
+                        computerChoice,
+                        userScore: this.userScore,
+                        computerScore: this.computerScore,
+                        explanation: this.explainOutcome(userChoice, computerChoice)
+                    };
+
+                    this.results.push(result);
+                    return result;
+                }
+
+                // Get the outcome of a round
+                getOutcome(userChoice, computerChoice) {
+                    if (userChoice === 'C' && computerChoice === 'C') return [2, 2];
+                    if (userChoice === 'C' && computerChoice === 'D') return [0, 3];
+                    if (userChoice === 'D' && computerChoice === 'C') return [3, 0];
+                    return [1, 1];
+                }
+
+                // Explain the outcome
+                explainOutcome(userChoice, computerChoice) {
+                    if (userChoice === 'C' && computerChoice === 'C') return 'Both cooperated: Mutual benefit.';
+                    if (userChoice === 'C' && computerChoice === 'D') return 'You cooperated, computer defected: You lost, computer gained.';
+                    if (userChoice === 'D' && computerChoice === 'C') return 'You defected, computer cooperated: You gained, computer lost.';
+                    return 'Both defected: Mutual distrust, minimal gain.';
+                }
+
+                // Check if the game has ended
+                isGameOver() {
+                    return this.currentRound >= this.totalRounds;
+                }
+
+                // Get final results
+                getFinalResults() {
+                    const theoreticalMaxScore = this.totalRounds * 2;
+                    return {
+                        userScore: this.userScore,
+                        computerScore: this.computerScore,
+                        theoreticalMaxScore,
+                        results: this.results
+                    };
+                }
+            }
+
+            // UI Controller handles user interactions
+            class UIController {
+                constructor() {
+                    this.game = null;
+                    this.setupEventListeners();
+                }
+
+                // Setup event listeners
+                setupEventListeners() {
+                    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                    document.getElementById('cooperateBtn').addEventListener('click', () => this.handleUserChoice('C'));
+                    document.getElementById('defectBtn').addEventListener('click', () => this.handleUserChoice('D'));
+                }
+
+                // Start the game
+                startGame() {
+                    const gameMode = document.getElementById('gameMode').value;
+                    const computerStrategy = document.getElementById('computerStrategy').value;
+                    const rounds = parseInt(document.getElementById('rounds').value);
+
+                    if (isNaN(rounds) || rounds <= 0) {
+                        alert('Please enter a valid number of rounds.');
+                        return;
+                    }
+
+                    this.game = new Game(gameMode, computerStrategy, rounds);
+                    document.getElementById('results').innerHTML = '';
+                    document.getElementById('finalResult').textContent = '';
+                    document.getElementById('resultsTable').style.display = (gameMode === 'simulation' && rounds > 50) ? 'none' : 'table';
+
+                    if (gameMode === 'real') {
+                        document.getElementById('gameControls').style.display = 'block';
+                        this.updateCurrentRound();
+                    } else {
+                        document.getElementById('gameControls').style.display = 'none';
+                        this.runSimulation();
+                    }
+                }
+
+                // Run full simulation
+                runSimulation() {
+                    while (!this.game.isGameOver()) {
+                        const userChoice = this.game.strategies.random(); // User uses random strategy in simulation
+                        const result = this.game.playRound(userChoice);
+                        if (this.game.totalRounds <= 50) {
+                            this.renderResultRow(result);
+                        }
+                    }
+                    this.endGame();
+                }
+
+                // Handle user's choice in real mode
+                handleUserChoice(userChoice) {
+                    const result = this.game.playRound(userChoice);
+                    this.renderResultRow(result);
+
+                    if (this.game.isGameOver()) {
+                        this.endGame();
+                    } else {
+                        this.updateCurrentRound();
+                    }
+                }
+
+                // Update the current round display
+                updateCurrentRound() {
+                    document.getElementById('currentRound').textContent = `Round ${this.game.currentRound + 1} of ${this.game.totalRounds}: Make your choice.`;
+                }
+
+                // Render a result row in the table
+                renderResultRow(result) {
+                    const row = `<tr>
+                        <td>${result.round}</td>
+                        <td>${result.userChoice}</td>
+                        <td>${result.computerChoice}</td>
+                        <td>${result.userScore}</td>
+                        <td>${result.computerScore}</td>
+                        <td>${result.explanation}</td>
+                    </tr>`;
+                    document.getElementById('results').innerHTML += row;
+                }
+
+                // End the game and show final results
+                endGame() {
+                    document.getElementById('gameControls').style.display = 'none';
+                    const finalResults = this.game.getFinalResults();
+                    const resultSummary = `Game Over!\nYour total score: ${finalResults.userScore}\nComputer's total score: ${finalResults.computerScore}\nTheoretical maximum score (both cooperate): ${finalResults.theoreticalMaxScore}.`;
+
+                    document.getElementById('finalResult').textContent = resultSummary;
+
+                    // Display statistical popup
+                    alert(resultSummary);
+                }
+            }
+
+            // Initialize the UI Controller
+            new UIController();
+
+        })();
+    </script>
+</body>
+</html>
